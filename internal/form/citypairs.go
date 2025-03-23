@@ -39,8 +39,8 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 	// UI выбора города
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewNote().Title(titleSelect),
 			huh.NewSelect[string]().
-				Title(titleSelect).
 				Options(options...).
 				Value(selectedIATA),
 		),

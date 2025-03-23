@@ -3,17 +3,30 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/itcaat/blet/config"
 	tpclient "github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/form"
+	"github.com/itcaat/blet/internal/models"
 )
 
 func RunWeekPrices(cfg *config.Config, token string) {
 	destination := askDestination()
 
-	result, err := tpclient.GetWeekPrices(cfg.DefaultOrigin, destination, token)
-	if err != nil {
-		fmt.Println("❌ Ошибка при получении данных:", err)
+	var result *models.WeekMatrixResponse
+	var apiErr error
+
+	action := func() {
+		result, apiErr = tpclient.GetWeekPrices(cfg.DefaultOrigin, destination, token)
+	}
+
+	_ = spinner.New().
+		Title("🔍 Ищем билеты на неделю...").
+		Action(action).
+		Run()
+
+	if apiErr != nil {
+		fmt.Println("❌ Ошибка при получении данных:", apiErr)
 		return
 	}
 
