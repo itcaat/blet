@@ -3,19 +3,14 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
-const (
-	citiesURL   = "https://api.travelpayouts.com/data/ru/cities.json"
-	cacheMaxAge = 7 * 24 * time.Hour
-)
-
-// Структура города
 type City struct {
 	Name                 string `json:"name"`
 	Code                 string `json:"code"`
@@ -23,63 +18,71 @@ type City struct {
 	HasFlightableAirport bool   `json:"has_flightable_airport"`
 }
 
-func EnsureCitiesCache() (string, error) {
-	home, _ := os.UserHomeDir()
-	cacheDir := filepath.Join(home, ".blet", "cache")
-	citiesPath := filepath.Join(cacheDir, "cities.json")
+var (
+	CitiesCache []City
+	once        sync.Once
+)
 
-	if info, err := os.Stat(citiesPath); err == nil {
-		if time.Since(info.ModTime()) < cacheMaxAge {
-			fmt.Println("📍 Найден актуальный cities.json")
-			return citiesPath, nil
+const citiesURL = "https://api.travelpayouts.com/data/ru/cities.json"
+
+// Init проверяет наличие cities.json и загружает его в память
+func Init() error {
+	var err error
+	once.Do(func() {
+		var path string
+		path, err = ensureCitiesFile()
+		if err != nil {
+			return
 		}
-		fmt.Println("🔄 Кеш устарел — перекачиваем cities.json...")
-	} else {
-		fmt.Println("⬇️ Качаем cities.json...")
+
+		var data []byte
+		data, err = os.ReadFile(path)
+		if err != nil {
+			return
+		}
+
+		err = json.Unmarshal(data, &CitiesCache)
+	})
+	return err
+}
+
+func ensureCitiesFile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
 	}
 
+	cacheDir := filepath.Join(home, ".blet", "cache")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return "", err
 	}
 
-	resp, err := http.Get(citiesURL)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
+	citiesPath := filepath.Join(cacheDir, "cities.json")
 
-	out, err := os.Create(citiesPath)
-	if err != nil {
-		return "", err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println("✅ cities.json успешно скачан")
-	return citiesPath, nil
-}
-
-func LoadCities(path string) ([]City, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cities []City
-	if err := json.Unmarshal(data, &cities); err != nil {
-		return nil, err
-	}
-
-	var filtered []City
-	for _, c := range cities {
-		if c.HasFlightableAirport {
-			filtered = append(filtered, c)
+	// Проверим наличие и актуальность (например, возраст файла > 7 дней)
+	stat, err := os.Stat(citiesPath)
+	if err == nil {
+		if stat.ModTime().AddDate(0, 0, 7).After(time.Now()) {
+			return citiesPath, nil // файл свежий
 		}
 	}
 
-	return filtered, nil
+	// Загружаем файл
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Accept", "application/json").
+		Get(citiesURL)
+	if err != nil {
+		return "", fmt.Errorf("ошибка загрузки cities.json: %w", err)
+	}
+
+	if resp.IsError() {
+		return "", fmt.Errorf("неудачный ответ при загрузке cities.json: %s", resp.Status())
+	}
+
+	if err := os.WriteFile(citiesPath, resp.Body(), 0644); err != nil {
+		return "", fmt.Errorf("не удалось сохранить cities.json: %w", err)
+	}
+
+	return citiesPath, nil
 }
