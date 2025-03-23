@@ -47,13 +47,13 @@ func GetCheapest(origin, token string) {
 	}
 }
 
-func GetWeekPrices(origin, token string) {
+func GetWeekPrices(origin, destination, token string) (*models.WeekMatrixResponse, error) {
 	var result models.WeekMatrixResponse
 
 	resp, err := client.R().
 		SetQueryParams(map[string]string{
 			"origin":      origin,
-			"destination": "LED",
+			"destination": destination,
 			"currency":    "rub",
 			"depart_date": "2025-09-04",
 			"return_date": "2025-09-11",
@@ -64,20 +64,14 @@ func GetWeekPrices(origin, token string) {
 		Get(weekMatrixURL)
 
 	if err != nil {
-		fmt.Println("Ошибка при запросе:", err)
-		return
+		return nil, err
 	}
 
 	if !result.Success {
-		fmt.Printf("⚠️ Неуспешный ответ API. Статус: %s. Ответ: %s\n", resp.Status(), resp.Body())
-		return
+		return nil, fmt.Errorf("API error: %s", resp.Status())
 	}
 
-	for _, flight := range result.Data {
-		fmt.Printf("- %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
-			origin, flight.Destination, flight.Value,
-			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
-	}
+	return &result, nil
 }
 
 func formatAviasalesLink(path string) string {

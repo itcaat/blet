@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/charmbracelet/huh"
 	"github.com/itcaat/blet/config"
 	tpclient "github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/form"
 	"github.com/joho/godotenv"
 )
 
@@ -43,56 +43,13 @@ func Execute() {
 	cfg, err := config.LoadConfig()
 	if err != nil || cfg.DefaultOrigin == "" {
 		// Готовим список (название + код)
-		var selectedIATA string
-		var cityPairs []struct {
-			Label string
-			Code  string
-		}
-
-		for _, city := range cache.CitiesCache {
-			if city.HasFlightableAirport && city.CountryCode == "RU" {
-				label := fmt.Sprintf("%s (%s)", city.Name, city.Code)
-				cityPairs = append(cityPairs, struct {
-					Label string
-					Code  string
-				}{Label: label, Code: city.Code})
-			}
-		}
-
-		// Сортируем по названию
-		sort.Slice(cityPairs, func(i, j int) bool {
-			return cityPairs[i].Label < cityPairs[j].Label
-		})
-
-		// Преобразуем в huh.Options
-		var options []huh.Option[string]
-		for _, pair := range cityPairs {
-			options = append(options, huh.NewOption(pair.Label, pair.Code))
-		}
-
-		// UI выбора города
-		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("Давай выберем город вылета по-умолчанию").
-					Options(options...).
-					Value(&selectedIATA),
-			),
-		)
-
-		if err := form.Run(); err != nil {
-			fmt.Println("❌ Ошибка выбора:", err)
-			os.Exit(1)
-		}
-
-		// Сохраняем конфиг
-		cfg.DefaultOrigin = selectedIATA
+		form.ShowCityPairs(&cfg.DefaultOrigin, "Давай выберем город вылета по-умолчанию")
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
 			os.Exit(1)
 		}
 
-		fmt.Println("✅ Город вылета установлен:", selectedIATA)
+		fmt.Println("✅ Город вылета установлен:", cfg.DefaultOrigin)
 	} else {
 		fmt.Printf("🌍 Город вылета по умолчанию: %s\n", cfg.DefaultOrigin)
 	}
@@ -118,9 +75,25 @@ func Execute() {
 
 	case "week":
 		fmt.Println("📅 Дешевые авиабилеты на неделю:")
-		tpclient.GetWeekPrices(cfg.DefaultOrigin, token)
+		RunWeekPrices(&cfg, token)
 
 	default:
 		fmt.Println("Неизвестный выбор")
+	}
+}
+
+func runWeekPrices(cfg *config.Config, token string) {
+	destination := askDestination()
+
+	result, err := tpclient.GetWeekPrices(cfg.DefaultOrigin, destination, token)
+	if err != nil {
+		fmt.Println("❌ Ошибка при получении данных:", err)
+		return
+	}
+
+	for _, flight := range result.Data {
+		fmt.Printf("- %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
+			cfg.DefaultOrigin, flight.Destination, flight.Value,
+			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
 	}
 }
