@@ -1,4 +1,4 @@
-package cmdhelpers
+package cmd
 
 import "fmt"
 

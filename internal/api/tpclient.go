@@ -1,4 +1,4 @@
-package tpclient
+package api
 
 import (
 	"fmt"
