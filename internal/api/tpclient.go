@@ -15,8 +15,7 @@ const (
 
 var client = resty.New()
 
-func GetCheapest(origin, token string) {
-
+func GetCheapest(origin, token string) (models.PriceForDatesResponse, error) {
 	var result models.PriceForDatesResponse
 
 	resp, err := client.R().
@@ -24,7 +23,7 @@ func GetCheapest(origin, token string) {
 			"origin":   origin,
 			"one_way":  "true",
 			"currency": "rub",
-			"limit":    "5",
+			"limit":    "10",
 			"token":    token,
 		}).
 		SetHeader("Accept", "application/json").
@@ -32,19 +31,14 @@ func GetCheapest(origin, token string) {
 		Get(pricesForDatesURL)
 
 	if err != nil {
-		fmt.Println("Ошибка при запросе:", err)
-		return
+		return result, err
 	}
 
 	if !result.Success {
-		fmt.Printf("⚠️ Неуспешный ответ API. Статус: %s\n", resp.Status())
-		return
+		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s", resp.Status(), resp.Body())
 	}
 
-	for _, t := range result.Data {
-		fmt.Printf("- %s → %s за %d₽ (%s)\n", t.Origin, t.Destination, t.Price, t.DepartureAt)
-		fmt.Printf("  Ссылка: %s\n", formatAviasalesLink(t.Link))
-	}
+	return result, nil
 }
 
 func GetWeekPrices(origin, destination, token string) (*models.WeekMatrixResponse, error) {
@@ -72,8 +66,4 @@ func GetWeekPrices(origin, destination, token string) (*models.WeekMatrixRespons
 	}
 
 	return &result, nil
-}
-
-func formatAviasalesLink(path string) string {
-	return fmt.Sprintf("https://www.aviasales.ru%s", path)
 }

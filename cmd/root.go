@@ -7,7 +7,6 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/itcaat/blet/config"
-	tpclient "github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/form"
 	"github.com/joho/godotenv"
@@ -71,7 +70,7 @@ func Execute() {
 	switch choice {
 	case "cheapest":
 		fmt.Println("✈️ Самые дешевые авиабилеты:")
-		tpclient.GetCheapest(cfg.DefaultOrigin, token)
+		RunCheapest(&cfg, token)
 
 	case "week":
 		fmt.Println("📅 Дешевые авиабилеты на неделю:")
@@ -79,21 +78,5 @@ func Execute() {
 
 	default:
 		fmt.Println("Неизвестный выбор")
-	}
-}
-
-func runWeekPrices(cfg *config.Config, token string) {
-	destination := askDestination()
-
-	result, err := tpclient.GetWeekPrices(cfg.DefaultOrigin, destination, token)
-	if err != nil {
-		fmt.Println("❌ Ошибка при получении данных:", err)
-		return
-	}
-
-	for _, flight := range result.Data {
-		fmt.Printf("- %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
-			cfg.DefaultOrigin, flight.Destination, flight.Value,
-			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
 	}
 }
