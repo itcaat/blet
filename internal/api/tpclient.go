@@ -20,11 +20,10 @@ func GetCheapest(origin, token string) (models.PriceForDatesResponse, error) {
 
 	resp, err := client.R().
 		SetQueryParams(map[string]string{
-			"origin":   origin,
-			"one_way":  "true",
-			"currency": "rub",
-			"limit":    "10",
-			"token":    token,
+			"origin":  origin,
+			"one_way": "true",
+			"limit":   "10",
+			"token":   token,
 		}).
 		SetHeader("Accept", "application/json").
 		SetResult(&result).
@@ -41,18 +40,24 @@ func GetCheapest(origin, token string) (models.PriceForDatesResponse, error) {
 	return result, nil
 }
 
-func GetWeekPrices(origin, destination, token string) (*models.WeekMatrixResponse, error) {
+func GetWeekPrices(origin, destination, depart, back, token string) (*models.WeekMatrixResponse, error) {
 	var result models.WeekMatrixResponse
 
+	fmt.Printf("Запрашиваю данные...: %s → %s %s - %s\n", origin, destination, depart, back)
+
+	params := map[string]string{
+		"origin":      origin,
+		"destination": destination,
+		"token":       token,
+		"depart_date": depart,
+	}
+
+	if back != "" {
+		params["return_date"] = back
+	}
+
 	resp, err := client.R().
-		SetQueryParams(map[string]string{
-			"origin":      origin,
-			"destination": destination,
-			"currency":    "rub",
-			"depart_date": "2025-09-04",
-			"return_date": "2025-09-11",
-			"token":       token,
-		}).
+		SetQueryParams(params).
 		SetHeader("Accept", "application/json").
 		SetResult(&result).
 		Get(weekMatrixURL)
@@ -62,7 +67,7 @@ func GetWeekPrices(origin, destination, token string) (*models.WeekMatrixRespons
 	}
 
 	if !result.Success {
-		return nil, fmt.Errorf("API error: %s", resp.Status())
+		return nil, fmt.Errorf("API error: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
 	}
 
 	return &result, nil

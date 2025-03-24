@@ -86,3 +86,12 @@ func ensureCitiesFile() (string, error) {
 
 	return citiesPath, nil
 }
+
+func GetHumanCityName(code string) string {
+	for _, city := range CitiesCache {
+		if city.Code == code {
+			return city.Name
+		}
+	}
+	return code
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/cmd"
 	"github.com/itcaat/blet/internal/usecase"
 )
@@ -16,7 +17,7 @@ func RunCheapest(cfg *config.Config, token string) {
 	}
 
 	for _, t := range tickets {
-		fmt.Printf("- %s → %s за %d₽ (%s)\n", t.Origin, t.Destination, t.Price, t.DepartureAt)
+		fmt.Printf("- %s → %s за %d₽ (%s)\n", cache.GetHumanCityName(t.Origin), cache.GetHumanCityName(t.Destination), t.Price, t.DepartureAt)
 		fmt.Printf("  Ссылка: %s\n", cmd.FormatAviasalesLink(t.Link))
 	}
 }

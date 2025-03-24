@@ -13,6 +13,7 @@ import (
 )
 
 func Execute() {
+
 	if len(os.Args) > 1 && os.Args[1] == "--reset" {
 		home, _ := os.UserHomeDir()
 		bletPath := filepath.Join(home, ".blet")
@@ -48,14 +49,12 @@ func Execute() {
 			os.Exit(1)
 		}
 
-		fmt.Println("✅ Город вылета установлен:", cfg.DefaultOrigin)
-	} else {
-		fmt.Printf("🌍 Город вылета по умолчанию: %s\n", cfg.DefaultOrigin)
+		fmt.Println("✅ IATA код города установлен: ", cfg.DefaultOrigin)
 	}
 
 	var choice string
 	menu := huh.NewSelect[string]().
-		Title("Выберите действие").
+		Title(fmt.Sprintf("👋 Добро пожаловать в Blet. Город вылета по умолчанию: %s", cache.GetHumanCityName(cfg.DefaultOrigin))).
 		Options(
 			huh.NewOption("Самые дешевые авиабилеты", "cheapest"),
 			huh.NewOption("Дешевые авиабилеты на неделю", "week"),

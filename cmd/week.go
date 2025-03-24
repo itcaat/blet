@@ -2,10 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/form"
 	"github.com/itcaat/blet/internal/models"
 	"github.com/itcaat/blet/internal/usecase"
@@ -13,16 +12,17 @@ import (
 
 func RunWeekPrices(cfg *config.Config, token string) {
 	dest := askDestination()
-	var flights []models.WeekMatrixFlight
-	var err error
+	depart, back, err := form.AskDates()
 
-	_ = spinner.New().
-		Title("🔍 Ищем билеты на неделю...").
-		Action(func() {
-			flights, err = usecase.GetWeekMatrix(cfg.DefaultOrigin, dest, token)
-			time.Sleep(500 * time.Millisecond)
-		}).
-		Run()
+	if err != nil {
+		fmt.Println("❌ Ошибка:", err)
+		return
+	}
+	var flights []models.WeekMatrixFlight
+
+	fmt.Printf("Вылет-прилет: %s - %s\n", depart, back)
+
+	flights, err = usecase.GetWeekMatrix(cfg.DefaultOrigin, dest, depart, back, token)
 
 	if err != nil {
 		fmt.Println("❌ Ошибка:", err)
@@ -30,8 +30,8 @@ func RunWeekPrices(cfg *config.Config, token string) {
 	}
 
 	for _, flight := range flights {
-		fmt.Printf("- %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
-			cfg.DefaultOrigin, flight.Destination, flight.Value,
+		fmt.Printf("- %s → %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
+			cache.GetHumanCityName(cfg.DefaultOrigin), cache.GetHumanCityName(flight.Destination), cache.GetHumanCityName(cfg.DefaultOrigin), flight.Value,
 			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
 	}
 }
