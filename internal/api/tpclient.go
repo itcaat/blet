@@ -22,7 +22,7 @@ func GetCheapest(origin, token string) (models.PriceForDatesResponse, error) {
 		SetQueryParams(map[string]string{
 			"origin":  origin,
 			"one_way": "true",
-			"limit":   "10",
+			"limit":   "500",
 			"token":   token,
 		}).
 		SetHeader("Accept", "application/json").
