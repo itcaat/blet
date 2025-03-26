@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -53,17 +54,20 @@ func Execute() {
 	}
 
 	var choice string
-	menu := huh.NewSelect[string]().
-		Title(fmt.Sprintf("👋 Добро пожаловать в Blet. Город вылета по умолчанию: %s", cache.GetHumanCityName(cfg.DefaultOrigin))).
-		Options(
-			huh.NewOption("Самые дешевые авиабилеты", "cheapest"),
-			huh.NewOption("Дешевые авиабилеты на неделю", "week"),
-		).
-		Value(&choice)
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(fmt.Sprintf("👋 Какие билеты будем искать? Город вылета по умолчанию: %s", cache.GetHumanCityName(cfg.DefaultOrigin))).
+				Options(
+					huh.NewOption("Билеты хоть куда", "cheapest"),
+					huh.NewOption("Поиск по недельной матрице", "popular"),
+				).
+				Value(&choice),
+		),
+	)
 
-	if err := menu.Run(); err != nil {
-		fmt.Println("Ошибка выбора:", err)
-		os.Exit(1)
+	if err := form.Run(); err != nil {
+		log.Fatal(err)
 	}
 
 	switch choice {
