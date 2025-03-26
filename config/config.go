@@ -7,7 +7,8 @@ import (
 )
 
 type Config struct {
-	DefaultOrigin string `json:"default_origin"`
+	DefaultOrigin      string `json:"default_origin"`
+	DefaultDestination string `json:"default_destination"`
 }
 
 func configPath() (string, error) {
