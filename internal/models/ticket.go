@@ -32,6 +32,7 @@ type SpecialOffers struct {
 	Destination string `json:"destination"`
 	DepartDate  string `json:"departure_at"`
 	Price       int    `json:"price"`
+	Link        string `json:"link"`
 }
 
 type SpecialOffersResponse struct {

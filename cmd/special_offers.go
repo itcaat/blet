@@ -5,6 +5,7 @@ import (
 
 	"github.com/itcaat/blet/config"
 	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/cmd"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
@@ -17,8 +18,14 @@ func RunSpecialOffers(cfg *config.Config, token string) {
 	}
 
 	for _, flight := range flights {
-		fmt.Printf("- %s → %s за %d₽ (Вылет: %s)\n",
+		url, err := usecase.GetShortUrl(cmd.FormatAviasalesLink(flight.Link), token)
+		if err != nil {
+			fmt.Println("❌ Ошибка:", err)
+			return
+		}
+		partnerUrl := url[0].PartnerUrl
+		fmt.Printf("- %s → %s за %d₽ (Вылет: %s) %s\n",
 			cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(flight.Destination), flight.Price,
-			flight.DepartDate)
+			flight.DepartDate, partnerUrl)
 	}
 }
