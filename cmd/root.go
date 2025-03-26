@@ -42,24 +42,54 @@ func Execute() {
 	}
 
 	cfg, err := config.LoadConfig()
-	if err != nil || cfg.DefaultOrigin == "" {
-		// Готовим список (название + код)
-		form.ShowCityPairs(&cfg.DefaultOrigin, "Давай выберем город вылета по-умолчанию")
+	if err != nil || cfg.DefaultOrigin == "" || cfg.DefaultDestination == "" {
+		cfg.DefaultOrigin = "MOW"
+		cfg.DefaultDestination = "LED"
+
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
 			os.Exit(1)
 		}
-
-		fmt.Println("✅ IATA код города установлен: ", cfg.DefaultOrigin)
 	}
 
+	// форма выбора города вылета
+
+	var change_default_origin bool
+
+	form_change_default_origin := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title("\nПривествую, странник. Кажется, пора полетать!? ✈️"),
+			huh.NewConfirm().
+				Title(fmt.Sprintf("Откуда: %s. \nКуда: %s. \n\nОставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(cfg.DefaultDestination))).
+				Value(&change_default_origin).
+				Affirmative("Выбрать другой").
+				Negative("Оставить"),
+		))
+
+	if err := form_change_default_origin.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+	if change_default_origin {
+		form.ShowCityPairs(&cfg.DefaultOrigin, "Давай выберем откуда полетим")
+		form.ShowCityPairs(&cfg.DefaultDestination, "Давай выберем куда полетим (можно выбрать страну или город)")
+		if err := config.SaveConfig(cfg); err != nil {
+			fmt.Println("❌ Не удалось сохранить конфиг:", err)
+			os.Exit(1)
+		}
+	}
+
+	// emoji airplane
 	var choice string
+
 	form := huh.NewForm(
+
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title(fmt.Sprintf("👋 Какие билеты будем искать? Город вылета по умолчанию: %s", cache.GetCityName(cfg.DefaultOrigin))).
+				Title(fmt.Sprintf("✈️ Какие билеты будем искать? %s ➡️  %s", cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(cfg.DefaultDestination))).
 				Options(
-					huh.NewOption("Билеты хоть куда", "cheapest"),
+					huh.NewOption("Самые дешевые авиабилеты", "cheapest"),
 					huh.NewOption("Поиск по недельной матрице", "week"),
 					huh.NewOption("Спецпредложения", "special"),
 				).
@@ -73,7 +103,6 @@ func Execute() {
 
 	switch choice {
 	case "cheapest":
-		fmt.Println("✈️ Самые дешевые авиабилеты:")
 		RunCheapest(&cfg, token)
 
 	case "week":

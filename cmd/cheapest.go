@@ -47,7 +47,10 @@ func RunCheapest(cfg *config.Config, token string) {
 	var selectedDesc string
 
 	form := huh.NewForm(
+
 		huh.NewGroup(
+			huh.NewNote().
+				Title("\n✈️ Возвращает самые дешевые авиабилеты за определённые даты, найденные пользователями Авиасейлс за последние 48 часов."),
 			huh.NewSelect[string]().
 				Title("Выберите маршрут").
 				Options(huh.NewOptions(mapsKeys(grouped)...)...).
