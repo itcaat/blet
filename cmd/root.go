@@ -57,7 +57,7 @@ func Execute() {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title(fmt.Sprintf("👋 Какие билеты будем искать? Город вылета по умолчанию: %s", cache.GetHumanCityName(cfg.DefaultOrigin))).
+				Title(fmt.Sprintf("👋 Какие билеты будем искать? Город вылета по умолчанию: %s", cache.GetCityName(cfg.DefaultOrigin))).
 				Options(
 					huh.NewOption("Билеты хоть куда", "cheapest"),
 					huh.NewOption("Поиск по недельной матрице", "week"),

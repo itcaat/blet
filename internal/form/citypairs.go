@@ -15,14 +15,14 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 		Code  string
 	}
 
-	for _, city := range cache.CitiesCache {
-		if city.HasFlightableAirport {
-			label := fmt.Sprintf("%s (%s)", city.Name, city.Code)
-			cityPairs = append(cityPairs, struct {
-				Label string
-				Code  string
-			}{Label: label, Code: city.Code})
-		}
+	for _, city := range cache.Cities().Filter(func(c cache.City) bool {
+		return c.HasFlightableAirport
+	}) {
+		label := fmt.Sprintf("%s (%s)", city.Name, city.Code)
+		cityPairs = append(cityPairs, struct {
+			Label string
+			Code  string
+		}{Label: label, Code: city.Code})
 	}
 
 	// Сортируем по названию
