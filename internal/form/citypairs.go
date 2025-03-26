@@ -25,6 +25,14 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 		}{Label: label, Code: city.Code})
 	}
 
+	for _, country := range cache.Countries().Data {
+		label := fmt.Sprintf("%s (%s)", country.Name, country.Code)
+		cityPairs = append(cityPairs, struct {
+			Label string
+			Code  string
+		}{Label: label, Code: country.Code})
+	}
+
 	// Сортируем по названию
 	sort.Slice(cityPairs, func(i, j int) bool {
 		return cityPairs[i].Label < cityPairs[j].Label

@@ -24,7 +24,7 @@ func RunSpecialOffers(cfg *config.Config, token string) {
 		}
 		partnerUrl := url[0].PartnerUrl
 		fmt.Printf("- %s → %s за %d₽ (Вылет: %s) %s\n",
-			cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(flight.Destination), flight.Price,
+			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), flight.Price,
 			flight.DepartDate, partnerUrl)
 	}
 }

@@ -61,7 +61,7 @@ func Execute() {
 			huh.NewNote().
 				Title("\nПривествую, странник. Кажется, пора полетать!? ✈️"),
 			huh.NewConfirm().
-				Title(fmt.Sprintf("Откуда: %s. \nКуда: %s. \n\nОставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(cfg.DefaultDestination))).
+				Title(fmt.Sprintf("Откуда: %s. \nКуда: %s. \n\nОставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination))).
 				Value(&change_default_origin).
 				Affirmative("Выбрать другой").
 				Negative("Оставить"),

@@ -30,7 +30,7 @@ func RunCheapest(cfg *config.Config, token string) {
 	prepareBurger := func() {
 		for _, t := range tickets {
 			from := cache.GetCityName(t.Origin)
-			to := cache.GetCityName(t.Destination)
+			to := cache.GetAnyName(t.Destination)
 			route := fmt.Sprintf("%s → %s", from, to)
 			url, err := usecase.GetShortUrl(t.URL(), token)
 			if err != nil {
@@ -65,7 +65,7 @@ func RunCheapest(cfg *config.Config, token string) {
 			huh.NewSelect[string]().
 				Title("Выберите маршрут").
 				Options(huh.NewOptions(mapsKeys(grouped)...)...).
-				Height(3).
+				Height(5).
 				Value(&selectedRoute),
 			huh.NewSelect[string]().
 				Title("Выберите рейс").
