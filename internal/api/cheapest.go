@@ -20,7 +20,7 @@ func GetCheapest(origin, destination, token string) (models.PriceForDatesRespons
 			"origin":      origin,
 			"destination": destination,
 			"one_way":     "true",
-			"limit":       "1000",
+			"limit":       "30",
 			"token":       token,
 		}).
 		SetHeader("Accept", "application/json").

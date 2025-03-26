@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/itcaat/blet/config"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/usecase"
@@ -26,25 +27,35 @@ func RunCheapest(cfg *config.Config, token string) {
 	grouped := make(map[string][]string)          // "Москва → Сочи" -> список описаний
 	details := make(map[string]map[string]string) // [маршрут][описание] -> ссылка
 
-	for _, t := range tickets {
-		from := cache.GetCityName(t.Origin)
-		to := cache.GetCityName(t.Destination)
-		route := fmt.Sprintf("%s → %s", from, to)
-		desc := fmt.Sprintf("%s — %d₽", t.DepartureAt, t.Price)
+	prepareBurger := func() {
+		for _, t := range tickets {
+			from := cache.GetCityName(t.Origin)
+			to := cache.GetCityName(t.Destination)
+			route := fmt.Sprintf("%s → %s", from, to)
+			url, err := usecase.GetShortUrl(t.URL(), token)
+			if err != nil {
+				fmt.Println("❌ Ошибка:", err)
+				return
+			}
+			partnerUrl := url[0].PartnerUrl
+			desc := fmt.Sprintf("%s — %d₽ — %s", t.DepartureAt, t.Price, partnerUrl)
 
-		if grouped[route] == nil {
-			grouped[route] = []string{}
-		}
-		grouped[route] = append(grouped[route], desc)
+			if grouped[route] == nil {
+				grouped[route] = []string{}
+			}
+			grouped[route] = append(grouped[route], desc)
 
-		if details[route] == nil {
-			details[route] = make(map[string]string)
+			if details[route] == nil {
+				details[route] = make(map[string]string)
+			}
+			details[route][desc] = t.URL()
 		}
-		details[route][desc] = t.URL()
 	}
 
 	var selectedRoute string
 	var selectedDesc string
+
+	_ = spinner.New().Title("Ищем лучшие билетики...").Action(prepareBurger).Run()
 
 	form := huh.NewForm(
 
@@ -54,7 +65,7 @@ func RunCheapest(cfg *config.Config, token string) {
 			huh.NewSelect[string]().
 				Title("Выберите маршрут").
 				Options(huh.NewOptions(mapsKeys(grouped)...)...).
-				Height(8).
+				Height(3).
 				Value(&selectedRoute),
 			huh.NewSelect[string]().
 				Title("Выберите рейс").
@@ -70,9 +81,6 @@ func RunCheapest(cfg *config.Config, token string) {
 		fmt.Println("❌ Ошибка:", err)
 		os.Exit(1)
 	}
-
-	link := details[selectedRoute][selectedDesc]
-	fmt.Printf("\n🔗 Ссылка на билет: %s\n", link)
 }
 
 // mapsKeys возвращает отсортированные ключи карты
