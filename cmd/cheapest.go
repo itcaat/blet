@@ -28,8 +28,8 @@ func RunCheapest(cfg *config.Config, token string) {
 	details := make(map[string]map[string]string) // [маршрут][описание] -> ссылка
 
 	for _, t := range tickets {
-		from := cache.GetHumanCityName(t.Origin)
-		to := cache.GetHumanCityName(t.Destination)
+		from := cache.GetCityName(t.Origin)
+		to := cache.GetCityName(t.Destination)
 		route := fmt.Sprintf("%s → %s", from, to)
 		desc := fmt.Sprintf("%s — %d₽", t.DepartureAt, t.Price)
 

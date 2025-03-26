@@ -18,7 +18,7 @@ func RunSpecialOffers(cfg *config.Config, token string) {
 
 	for _, flight := range flights {
 		fmt.Printf("- %s → %s за %d₽ (Вылет: %s)\n",
-			cache.GetHumanCityName(cfg.DefaultOrigin), cache.GetHumanCityName(flight.Destination), flight.Price,
+			cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(flight.Destination), flight.Price,
 			flight.DepartDate)
 	}
 }
