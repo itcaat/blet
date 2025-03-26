@@ -5,8 +5,8 @@ import (
 	"github.com/itcaat/blet/internal/models"
 )
 
-func GetCheapestTickets(origin, token string) ([]models.Ticket, error) {
-	resp, err := api.GetCheapest(origin, token)
+func GetCheapestTickets(origin, destination, token string) ([]models.Ticket, error) {
+	resp, err := api.GetCheapest(origin, destination, token)
 	if err != nil {
 		return nil, err
 	}
