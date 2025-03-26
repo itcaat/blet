@@ -11,7 +11,7 @@ import (
 )
 
 func RunCheapest(cfg *config.Config, token string) {
-	tickets, err := usecase.GetCheapestTickets(cfg.DefaultOrigin, token)
+	tickets, err := usecase.GetCheapestTickets(cfg.DefaultOrigin, cfg.DefaultDestination, token)
 	if err != nil {
 		fmt.Println("❌ Ошибка при получении данных:", err)
 		return
