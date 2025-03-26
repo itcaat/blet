@@ -41,7 +41,7 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Title(titleSelect).
-				Height(8).
+				Height(10).
 				Options(options...).
 				Value(selectedIATA),
 		),

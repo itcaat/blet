@@ -72,8 +72,8 @@ func Execute() {
 	}
 
 	if change_default_origin {
-		form.ShowCityPairs(&cfg.DefaultOrigin, "Давай выберем откуда полетим")
-		form.ShowCityPairs(&cfg.DefaultDestination, "Давай выберем куда полетим (можно выбрать страну или город)")
+		form.ShowCityPairs(&cfg.DefaultOrigin, "Откуда полетим")
+		form.ShowCityPairs(&cfg.DefaultDestination, "Куда полетим (можно выбрать страну или город)")
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
 			os.Exit(1)
