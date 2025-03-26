@@ -5,7 +5,6 @@ import (
 
 	"github.com/itcaat/blet/config"
 	"github.com/itcaat/blet/internal/cache"
-	"github.com/itcaat/blet/internal/cmd"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
@@ -18,7 +17,7 @@ func RunSpecialOffers(cfg *config.Config, token string) {
 	}
 
 	for _, flight := range flights {
-		url, err := usecase.GetShortUrl(cmd.FormatAviasalesLink(flight.Link), token)
+		url, err := usecase.GetShortUrl(flight.URL(), token)
 		if err != nil {
 			fmt.Println("❌ Ошибка:", err)
 			return

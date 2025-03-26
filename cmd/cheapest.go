@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/itcaat/blet/config"
 	"github.com/itcaat/blet/internal/cache"
-	cmdhelpers "github.com/itcaat/blet/internal/cmd"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
@@ -41,7 +40,7 @@ func RunCheapest(cfg *config.Config, token string) {
 		if details[route] == nil {
 			details[route] = make(map[string]string)
 		}
-		details[route][desc] = cmdhelpers.FormatAviasalesLink(t.Link)
+		details[route][desc] = t.URL()
 	}
 
 	var selectedRoute string
