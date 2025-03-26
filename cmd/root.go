@@ -60,7 +60,8 @@ func Execute() {
 				Title(fmt.Sprintf("👋 Какие билеты будем искать? Город вылета по умолчанию: %s", cache.GetHumanCityName(cfg.DefaultOrigin))).
 				Options(
 					huh.NewOption("Билеты хоть куда", "cheapest"),
-					huh.NewOption("Поиск по недельной матрице", "popular"),
+					huh.NewOption("Поиск по недельной матрице", "week"),
+					huh.NewOption("Спецпредложения", "special"),
 				).
 				Value(&choice),
 		),
@@ -76,8 +77,12 @@ func Execute() {
 		RunCheapest(&cfg, token)
 
 	case "week":
-		fmt.Println("📅 Дешевые авиабилеты на неделю:")
+		fmt.Println("✈️ Дешевые авиабилеты на неделю:")
 		RunWeekPrices(&cfg, token)
+
+	case "special":
+		fmt.Println("✈️ Спецпредложения от авиакомпаний:")
+		RunSpecialOffers(&cfg, token)
 
 	default:
 		fmt.Println("Неизвестный выбор")
