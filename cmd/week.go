@@ -6,7 +6,6 @@ import (
 	"github.com/itcaat/blet/config"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/form"
-	"github.com/itcaat/blet/internal/models"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
@@ -18,11 +17,10 @@ func RunWeekPrices(cfg *config.Config, token string) {
 		fmt.Println("❌ Ошибка:", err)
 		return
 	}
-	var flights []models.WeekMatrixFlight
 
 	fmt.Printf("Вылет-прилет: %s - %s\n", depart, back)
 
-	flights, err = usecase.GetWeekMatrix(cfg.DefaultOrigin, dest, depart, back, token)
+	flights, err := usecase.GetWeekMatrix(cfg.DefaultOrigin, dest, depart, back, token)
 
 	if err != nil {
 		fmt.Println("❌ Ошибка:", err)

@@ -27,3 +27,14 @@ type WeekMatrixResponse struct {
 	Success bool               `json:"success"`
 	Data    []WeekMatrixFlight `json:"data"`
 }
+
+type SpecialOffers struct {
+	Destination string `json:"destination"`
+	DepartDate  string `json:"departure_at"`
+	Price       int    `json:"price"`
+}
+
+type SpecialOffersResponse struct {
+	Success bool            `json:"success"`
+	Data    []SpecialOffers `json:"data"`
+}
