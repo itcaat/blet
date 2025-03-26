@@ -29,7 +29,7 @@ func RunWeekPrices(cfg *config.Config, token string) {
 
 	for _, flight := range flights {
 		fmt.Printf("- %s → %s → %s за %d₽ (%s → %s, пересадок: %d)\n",
-			cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(flight.Destination), cache.GetCityName(cfg.DefaultOrigin), flight.Value,
+			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), cache.GetCityName(cfg.DefaultOrigin), flight.Value,
 			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
 	}
 }

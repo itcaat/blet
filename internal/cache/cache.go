@@ -140,10 +140,15 @@ func ensureCacheFile(url, fileName string) (string, error) {
 
 // --- Публичные функции доступа ---
 
-func GetCityName(code string) string {
-	citiesCache.mu.RLock()
-	defer citiesCache.mu.RUnlock()
+func GetAnyName(code string) string {
+	if len(code) == 2 {
+		return GetCountryName(code)
+	} else {
+		return GetCityName(code)
+	}
+}
 
+func GetCityName(code string) string {
 	for _, city := range citiesCache.Data {
 		if city.Code == code {
 			return city.Name
@@ -153,9 +158,6 @@ func GetCityName(code string) string {
 }
 
 func GetCountryName(code string) string {
-	countriesCache.mu.RLock()
-	defer countriesCache.mu.RUnlock()
-
 	for _, country := range countriesCache.Data {
 		if country.Code == code {
 			return country.Name
