@@ -36,6 +36,6 @@ func RunWeekPrices(cfg *config.Config, token string) {
 
 func askDestination() string {
 	var dest string
-	form.ShowCityPairs(&dest, "Куда летим?")
+	form.ShowIataTargets(&dest, "Куда летим?", true)
 	return dest
 }
