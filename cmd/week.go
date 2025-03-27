@@ -10,17 +10,17 @@ import (
 )
 
 func RunWeekPrices(cfg *config.Config, token string) {
-	dest := askDestination()
-	depart, back, err := form.AskDates()
+	var departDate, backDate string
+	err := form.AskDates(&departDate, &backDate)
 
 	if err != nil {
 		fmt.Println("❌ Ошибка:", err)
 		return
 	}
 
-	fmt.Printf("Вылет-прилет: %s - %s\n", depart, back)
+	fmt.Printf("Вылет-прилет: %s - %s\n", departDate, backDate)
 
-	flights, err := usecase.GetWeekMatrix(cfg.DefaultOrigin, dest, depart, back, token)
+	flights, err := usecase.GetWeekMatrix(cfg.DefaultOrigin, cfg.DefaultDestination, departDate, backDate, token)
 
 	if err != nil {
 		fmt.Println("❌ Ошибка:", err)
@@ -32,10 +32,4 @@ func RunWeekPrices(cfg *config.Config, token string) {
 			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), cache.GetCityName(cfg.DefaultOrigin), flight.Value,
 			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
 	}
-}
-
-func askDestination() string {
-	var dest string
-	form.ShowCityPairs(&dest, "Куда летим?")
-	return dest
 }

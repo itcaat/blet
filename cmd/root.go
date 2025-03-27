@@ -72,8 +72,8 @@ func Execute() {
 	}
 
 	if change_default_origin {
-		form.ShowCityPairs(&cfg.DefaultOrigin, "Откуда полетим")
-		form.ShowCityPairs(&cfg.DefaultDestination, "Куда полетим (можно выбрать страну или город)")
+		form.ShowIataTargets(&cfg.DefaultOrigin, "Откуда полетим", false)
+		form.ShowIataTargets(&cfg.DefaultDestination, "Куда полетим (можно выбрать страну или город)", true)
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
 			os.Exit(1)
@@ -89,9 +89,9 @@ func Execute() {
 			huh.NewSelect[string]().
 				Title(fmt.Sprintf("%s ➡️  %s", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination))).
 				Options(
-					huh.NewOption("Самые дешевые авиабилеты", "cheapest"),
-					huh.NewOption("Поиск по недельной матрице", "week"),
-					huh.NewOption("Спецпредложения", "special"),
+					huh.NewOption("✈️ Самые дешевые авиабилеты", "cheapest"),
+					huh.NewOption("👻 Поиск по недельной матрице", "week"),
+					huh.NewOption("🔮 Спецпредложения", "special"),
 				).
 				Value(&choice),
 		),

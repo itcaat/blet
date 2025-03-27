@@ -9,7 +9,7 @@ import (
 	"github.com/itcaat/blet/internal/cache"
 )
 
-func ShowCityPairs(selectedIATA *string, titleSelect string) {
+func ShowIataTargets(selectedIATA *string, titleSelect string, includeCountry bool) {
 	var cityPairs []struct {
 		Label string
 		Code  string
@@ -25,12 +25,14 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 		}{Label: label, Code: city.Code})
 	}
 
-	for _, country := range cache.Countries().Data {
-		label := fmt.Sprintf("%s (%s)", country.Name, country.Code)
-		cityPairs = append(cityPairs, struct {
-			Label string
-			Code  string
-		}{Label: label, Code: country.Code})
+	if includeCountry {
+		for _, country := range cache.Countries().Data {
+			label := fmt.Sprintf("%s (%s)", country.Name, country.Code)
+			cityPairs = append(cityPairs, struct {
+				Label string
+				Code  string
+			}{Label: label, Code: country.Code})
+		}
 	}
 
 	// Сортируем по названию

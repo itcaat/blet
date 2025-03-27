@@ -61,7 +61,8 @@ func RunCheapest(cfg *config.Config, token string) {
 
 		huh.NewGroup(
 			huh.NewNote().
-				Title("\n✈️ Возвращает самые дешевые авиабилеты за определённые даты, найденные пользователями Авиасейлс за последние 48 часов."),
+				Title("\n✈️ Самые дешевые авиабилеты").
+				Description("Возвращает самые дешевые авиабилеты за определённые даты, найденные пользователями Авиасейлс за последние 48 часов."),
 			huh.NewSelect[string]().
 				Title("Выберите маршрут").
 				Options(huh.NewOptions(mapsKeys(grouped)...)...).
