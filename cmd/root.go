@@ -87,7 +87,7 @@ func Execute() {
 
 		huh.NewGroup(
 			huh.NewSelect[string]().
-				Title(fmt.Sprintf("✈️ Какие билеты будем искать? %s ➡️  %s", cache.GetCityName(cfg.DefaultOrigin), cache.GetCityName(cfg.DefaultDestination))).
+				Title(fmt.Sprintf("%s ➡️  %s", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination))).
 				Options(
 					huh.NewOption("Самые дешевые авиабилеты", "cheapest"),
 					huh.NewOption("Поиск по недельной матрице", "week"),
