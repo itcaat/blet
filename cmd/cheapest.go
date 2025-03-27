@@ -27,7 +27,7 @@ func RunCheapest(cfg *config.Config, token string) {
 	grouped := make(map[string][]string)          // "Москва → Сочи" -> список описаний
 	details := make(map[string]map[string]string) // [маршрут][описание] -> ссылка
 
-	prepareBurger := func() {
+	prepareTickets := func() {
 		for _, t := range tickets {
 			from := cache.GetCityName(t.Origin)
 			to := cache.GetAnyName(t.Destination)
@@ -55,7 +55,7 @@ func RunCheapest(cfg *config.Config, token string) {
 	var selectedRoute string
 	var selectedDesc string
 
-	_ = spinner.New().Title("Ищем лучшие билетики...").Action(prepareBurger).Run()
+	_ = spinner.New().Title("Ищем лучшие билетики...").Action(prepareTickets).Run()
 
 	form := huh.NewForm(
 

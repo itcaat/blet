@@ -44,6 +44,9 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 		options = append(options, huh.NewOption(pair.Label, pair.Code))
 	}
 
+	//надо через временную переменную, иначе есть баг
+	var selected string
+
 	// UI выбора города
 	form := huh.NewForm(
 		huh.NewGroup(
@@ -51,12 +54,13 @@ func ShowCityPairs(selectedIATA *string, titleSelect string) {
 				Title(titleSelect).
 				Height(10).
 				Options(options...).
-				Value(selectedIATA),
+				Value(&selected),
 		),
 	)
 	if err := form.Run(); err != nil {
 		fmt.Println("❌ Ошибка выбора:", err)
 		os.Exit(1)
 	}
+	*selectedIATA = selected
 
 }
