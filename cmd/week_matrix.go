@@ -9,7 +9,8 @@ import (
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunWeekPrices(cfg *config.Config, token string) {
+func RunWeekMatrix(cfg *config.Config, token string) {
+
 	var departDate, backDate string
 	err := form.AskDates(&departDate, &backDate)
 
@@ -17,7 +18,7 @@ func RunWeekPrices(cfg *config.Config, token string) {
 		fmt.Println("❌ Ошибка:", err)
 		return
 	}
-
+	fmt.Println("✈️ Дешевые авиабилеты на неделю:")
 	fmt.Printf("Вылет-прилет: %s - %s\n", departDate, backDate)
 
 	flights, err := usecase.GetWeekMatrix(cfg.DefaultOrigin, cfg.DefaultDestination, departDate, backDate, token)

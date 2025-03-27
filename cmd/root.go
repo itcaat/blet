@@ -106,8 +106,7 @@ func Execute() {
 		RunCheapest(&cfg, token)
 
 	case "week":
-		fmt.Println("✈️ Дешевые авиабилеты на неделю:")
-		RunWeekPrices(&cfg, token)
+		RunWeekMatrix(&cfg, token)
 
 	case "special":
 		fmt.Println("✈️ Спецпредложения от авиакомпаний:")
