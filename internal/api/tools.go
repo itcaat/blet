@@ -48,7 +48,7 @@ func GetShortUrl(url, token string) (models.ShortLinksResponse, error) {
 	}
 
 	if result.Status != "success" {
-		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s", resp.Status(), resp.Body())
+		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
 	}
 
 	return result, nil

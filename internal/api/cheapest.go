@@ -32,7 +32,7 @@ func GetCheapest(origin, destination, token string) (models.PriceForDatesRespons
 	}
 
 	if !result.Success {
-		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s", resp.Status(), resp.Body())
+		return result, fmt.Errorf("⚠️ API1 не вернул успешный ответ. HTTP: %s. Body: %s. Request: %s", resp.Status(), resp.Body(), resp.Request.URL)
 	}
 
 	return result, nil
