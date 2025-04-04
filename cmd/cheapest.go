@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -25,12 +26,16 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 		return
 	}
 
-	// Группировка по маршрутам
-	grouped := make(map[string][]string)          // "Москва → Сочи" -> список описаний
-	details := make(map[string]map[string]string) // [маршрут][описание] -> ссылка
+	grouped := make(map[string][]string)
+	details := make(map[string]map[string]string)
+	var mu sync.Mutex
 
 	prepareTickets := func() {
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 10) // ограничим до 5 одновременных запросов
+
 		for _, t := range tickets {
+			t := t
 			from := cache.GetCityName(t.Origin)
 			to := cache.GetAnyName(t.Destination)
 			route := fmt.Sprintf("%s → %s", from, to)
@@ -38,31 +43,38 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 				route += fmt.Sprintf(" → %s", from)
 			}
 
-			resp, err := client.GetShortUrl(t.URL())
-			if err != nil {
-				fmt.Println("❌ Ошибка:", err)
-				return
-			}
-			partnerUrl := resp.Result.Links[0].PartnerUrl
-
 			desc := fmt.Sprintf("Туда: %s", t.DepartureAt)
-
 			if cfg.OneWay {
-				desc += fmt.Sprintf("— %d₽ — %s", t.Price, partnerUrl)
+				desc += fmt.Sprintf(" — %d₽", t.Price)
 			} else {
-				desc += fmt.Sprintf(". Обратно: %s — %d₽ — %s", t.ReturnAt, t.Price, partnerUrl)
+				desc += fmt.Sprintf(". Обратно: %s — %d₽", t.ReturnAt, t.Price)
 			}
 
-			if grouped[route] == nil {
-				grouped[route] = []string{}
-			}
-			grouped[route] = append(grouped[route], desc)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
 
-			if details[route] == nil {
-				details[route] = make(map[string]string)
-			}
-			details[route][desc] = t.URL()
+				resp, err := client.GetShortUrl(t.URL())
+				if err != nil {
+					fmt.Println("❌ Ошибка:", err)
+					return
+				}
+				partnerUrl := resp.Result.Links[0].PartnerUrl
+				fullDesc := fmt.Sprintf("%s — %s", desc, partnerUrl)
+
+				mu.Lock()
+				grouped[route] = append(grouped[route], fullDesc)
+				if details[route] == nil {
+					details[route] = make(map[string]string)
+				}
+				details[route][fullDesc] = t.URL()
+				mu.Unlock()
+			}()
 		}
+
+		wg.Wait()
 	}
 
 	var selectedRoute string
@@ -71,7 +83,6 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 	_ = spinner.New().Title("Ищем лучшие билетики...").Action(prepareTickets).Run()
 
 	form := huh.NewForm(
-
 		huh.NewGroup(
 			huh.NewNote().
 				Title("\n✈️ Самые дешевые авиабилеты").
@@ -97,12 +108,10 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 	}
 }
 
-// mapsKeys возвращает отсортированные ключи карты
 func mapsKeys(m map[string][]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
-	// можно отсортировать, если хочешь алфавитный порядок
 	return keys
 }
