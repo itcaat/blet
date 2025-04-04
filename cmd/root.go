@@ -107,7 +107,7 @@ func Execute() {
 		log.Fatal(err)
 	}
 
-	client := api.New(token)
+	var client api.TravelpayoutsAPI = api.New(token)
 
 	switch choice {
 	case "cheapest":

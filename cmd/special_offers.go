@@ -9,7 +9,7 @@ import (
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunSpecialOffers(client *api.Client, cfg *config.Config) {
+func RunSpecialOffers(client api.TravelpayoutsAPI, cfg *config.Config) {
 	flights, err := usecase.GetSpecialOffers(client, cfg.DefaultOrigin)
 
 	if err != nil {

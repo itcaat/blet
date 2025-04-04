@@ -1,0 +1,1048 @@
+
+📂 ./cmd/week_matrix.go
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/form"
+	"github.com/itcaat/blet/internal/usecase"
+)
+
+func RunWeekMatrix(client *api.Client, cfg *config.Config) {
+
+	var departDate, backDate string
+	err := form.AskDates(&departDate, &backDate)
+
+	if err != nil {
+		fmt.Println("❌ Ошибка:", err)
+		return
+	}
+	fmt.Println("✈️ Дешевые авиабилеты на неделю:")
+	fmt.Printf("Вылет-прилет: %s - %s
+", departDate, backDate)
+
+	flights, err := usecase.GetWeekMatrix(client, cfg.DefaultOrigin, cfg.DefaultDestination, departDate, backDate)
+
+	if err != nil {
+		fmt.Println("❌ Ошибка:", err)
+		return
+	}
+
+	for _, flight := range flights {
+		fmt.Printf("- %s → %s → %s за %d₽ (%s → %s, пересадок: %d)
+",
+			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), cache.GetCityName(cfg.DefaultOrigin), flight.Value,
+			flight.DepartDate, flight.ReturnDate, flight.NumberOfStops)
+	}
+}
+
+
+📂 ./cmd/special_offers.go
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/usecase"
+)
+
+func RunSpecialOffers(client *api.Client, cfg *config.Config) {
+	flights, err := usecase.GetSpecialOffers(client, cfg.DefaultOrigin)
+
+	if err != nil {
+		fmt.Println("❌ Ошибка:", err)
+		return
+	}
+
+	for _, flight := range flights {
+		resp, err := client.GetShortUrl(flight.URL())
+		if err != nil {
+			fmt.Println("❌ Ошибка:", err)
+			return
+		}
+		partnerUrl := resp.Result.Links[0].PartnerUrl
+		fmt.Printf("- %s → %s за %d₽ (Вылет: %s) %s
+",
+			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), flight.Price,
+			flight.DepartDate, partnerUrl)
+	}
+}
+
+
+📂 ./cmd/cheapest.go
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
+	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/usecase"
+)
+
+func RunCheapest(client *api.Client, cfg *config.Config) {
+	tickets, err := usecase.GetCheapestTickets(client, cfg.DefaultOrigin, cfg.DefaultDestination, strconv.FormatBool(cfg.OneWay))
+	if err != nil {
+		fmt.Println("❌ Ошибка при получении данных:", err)
+		return
+	}
+
+	if len(tickets) == 0 {
+		fmt.Println("⚠️ Билеты не найдены.")
+		return
+	}
+
+	// Группировка по маршрутам
+	grouped := make(map[string][]string)          // "Москва → Сочи" -> список описаний
+	details := make(map[string]map[string]string) // [маршрут][описание] -> ссылка
+
+	prepareTickets := func() {
+		for _, t := range tickets {
+			from := cache.GetCityName(t.Origin)
+			to := cache.GetAnyName(t.Destination)
+			route := fmt.Sprintf("%s → %s", from, to)
+			if !cfg.OneWay {
+				route += fmt.Sprintf(" → %s", from)
+			}
+
+			resp, err := client.GetShortUrl(t.URL())
+			if err != nil {
+				fmt.Println("❌ Ошибка:", err)
+				return
+			}
+			partnerUrl := resp.Result.Links[0].PartnerUrl
+
+			desc := fmt.Sprintf("Туда: %s", t.DepartureAt)
+
+			if cfg.OneWay {
+				desc += fmt.Sprintf("— %d₽ — %s", t.Price, partnerUrl)
+			} else {
+				desc += fmt.Sprintf(". Обратно: %s — %d₽ — %s", t.ReturnAt, t.Price, partnerUrl)
+			}
+
+			if grouped[route] == nil {
+				grouped[route] = []string{}
+			}
+			grouped[route] = append(grouped[route], desc)
+
+			if details[route] == nil {
+				details[route] = make(map[string]string)
+			}
+			details[route][desc] = t.URL()
+		}
+	}
+
+	var selectedRoute string
+	var selectedDesc string
+
+	_ = spinner.New().Title("Ищем лучшие билетики...").Action(prepareTickets).Run()
+
+	form := huh.NewForm(
+
+		huh.NewGroup(
+			huh.NewNote().
+				Title("
+✈️ Самые дешевые авиабилеты").
+				Description("Возвращает самые дешевые авиабилеты за определённые даты, найденные пользователями Авиасейлс за последние 48 часов."),
+			huh.NewSelect[string]().
+				Title("Выберите маршрут").
+				Options(huh.NewOptions(mapsKeys(grouped)...)...).
+				Height(5).
+				Value(&selectedRoute),
+			huh.NewSelect[string]().
+				Title("Выберите рейс").
+				Height(8).
+				OptionsFunc(func() []huh.Option[string] {
+					return huh.NewOptions(grouped[selectedRoute]...)
+				}, &selectedRoute).
+				Value(&selectedDesc),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		fmt.Println("❌ Ошибка:", err)
+		os.Exit(1)
+	}
+}
+
+// mapsKeys возвращает отсортированные ключи карты
+func mapsKeys(m map[string][]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	// можно отсортировать, если хочешь алфавитный порядок
+	return keys
+}
+
+
+📂 ./cmd/root.go
+package cmd
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+
+	"github.com/charmbracelet/huh"
+	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/cache"
+	"github.com/itcaat/blet/internal/form"
+	"github.com/joho/godotenv"
+)
+
+func Execute() {
+
+	if len(os.Args) > 1 && os.Args[1] == "--reset" {
+		home, _ := os.UserHomeDir()
+		bletPath := filepath.Join(home, ".blet")
+
+		if err := os.RemoveAll(bletPath); err != nil {
+			fmt.Println("❌ Не удалось удалить ~/.blet:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("🧹 Конфигурация сброшена. Папка ~/.blet удалена.")
+		os.Exit(0)
+	}
+
+	if err := cache.Init(); err != nil {
+		fmt.Println("❌ Ошибка инициализации кэша:", err)
+		os.Exit(1)
+	}
+
+	// Загружаем .env
+	_ = godotenv.Load()
+	token := os.Getenv("AVIASALES_TOKEN")
+	if token == "" {
+		fmt.Println("❌ Переменная AVIASALES_TOKEN не задана в .env")
+		os.Exit(1)
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil || cfg.DefaultOrigin == "" || cfg.DefaultDestination == "" {
+		cfg.DefaultOrigin = "MOW"
+		cfg.DefaultDestination = "LED"
+		cfg.OneWay = true
+
+		if err := config.SaveConfig(cfg); err != nil {
+			fmt.Println("❌ Не удалось сохранить конфиг:", err)
+			os.Exit(1)
+		}
+	}
+
+	// форма выбора города вылета
+
+	var change_default_origin bool
+
+	form_change_default_origin := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title("
+Привествую, странник. Кажется, пора полетать!? ✈️"),
+			huh.NewConfirm().
+				Title(fmt.Sprintf("Откуда: %s 
+Куда: %s
+Направление: %s 
+
+Оставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination), cfg.TekstomPokazhiOneWay())).
+				Value(&change_default_origin).
+				Affirmative("Выбрать другой").
+				Negative("Оставить"),
+		))
+
+	if err := form_change_default_origin.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+	if change_default_origin {
+		form.ShowIataTargets(&cfg.DefaultOrigin, "Откуда полетим", false)
+		form.ShowIataTargets(&cfg.DefaultDestination, "Куда полетим (можно выбрать страну или город)", true)
+		form.ShowConfirm(&cfg.OneWay, "В одну с сторону?", "Только туда", "Туда-обратно")
+
+		if err := config.SaveConfig(cfg); err != nil {
+			fmt.Println("❌ Не удалось сохранить конфиг:", err)
+			os.Exit(1)
+		}
+	}
+
+	fmt.Sprintln(cfg.OneWay)
+
+	// emoji airplane
+	var choice string
+
+	form := huh.NewForm(
+
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(fmt.Sprintf("%s ➡️  %s", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination))).
+				Options(
+					huh.NewOption("✈️ Самые дешевые авиабилеты", "cheapest"),
+					huh.NewOption("👻 Поиск по недельной матрице", "week"),
+					huh.NewOption("🔮 Спецпредложения", "special"),
+				).
+				Value(&choice),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+	client := api.New(token)
+
+	switch choice {
+	case "cheapest":
+		RunCheapest(client, &cfg)
+
+	case "week":
+		RunWeekMatrix(client, &cfg)
+
+	case "special":
+		fmt.Println("✈️ Спецпредложения от авиакомпаний:")
+		RunSpecialOffers(client, &cfg)
+
+	default:
+		fmt.Println("Неизвестный выбор")
+	}
+}
+
+
+📂 ./config/config.go
+package config
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+)
+
+type Config struct {
+	DefaultOrigin      string `json:"default_origin"`
+	DefaultDestination string `json:"default_destination"`
+	OneWay             bool   `json:"one_way"`
+}
+
+func (c *Config) TekstomPokazhiOneWay() string {
+	if c.OneWay {
+		return "В одну сторону"
+	} else {
+		return "Туда-обратно"
+	}
+}
+
+func configPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	configDir := filepath.Join(homeDir, ".blet")
+	err = os.MkdirAll(configDir, 0755)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "config.json"), nil
+}
+
+func SaveConfig(cfg Config) error {
+	path, err := configPath()
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func LoadConfig() (Config, error) {
+	var cfg Config
+	path, err := configPath()
+	if err != nil {
+		return cfg, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return cfg, err
+	}
+	err = json.Unmarshal(data, &cfg)
+	return cfg, err
+}
+
+
+📂 ./internal/form/iata.go
+package form
+
+import (
+	"fmt"
+	"os"
+	"sort"
+
+	"github.com/charmbracelet/huh"
+	"github.com/itcaat/blet/internal/cache"
+)
+
+func ShowIataTargets(selectedIATA *string, titleSelect string, includeCountry bool) {
+	var cityPairs []struct {
+		Label string
+		Code  string
+	}
+
+	for _, city := range cache.Cities().Filter(func(c cache.City) bool {
+		return c.HasFlightableAirport
+	}) {
+		label := fmt.Sprintf("%s (%s)", city.Name, city.Code)
+		cityPairs = append(cityPairs, struct {
+			Label string
+			Code  string
+		}{Label: label, Code: city.Code})
+	}
+
+	if includeCountry {
+		for _, country := range cache.Countries().Data {
+			label := fmt.Sprintf("%s (%s)", country.Name, country.Code)
+			cityPairs = append(cityPairs, struct {
+				Label string
+				Code  string
+			}{Label: label, Code: country.Code})
+		}
+	}
+
+	// Сортируем по названию
+	sort.Slice(cityPairs, func(i, j int) bool {
+		return cityPairs[i].Label < cityPairs[j].Label
+	})
+
+	// Преобразуем в huh.Options
+	var options []huh.Option[string]
+	for _, pair := range cityPairs {
+		options = append(options, huh.NewOption(pair.Label, pair.Code))
+	}
+
+	//надо через временную переменную, иначе есть баг
+	var selected string
+
+	// UI выбора города
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(titleSelect).
+				Height(10).
+				Options(options...).
+				Value(&selected),
+		),
+	)
+	if err := form.Run(); err != nil {
+		fmt.Println("❌ Ошибка выбора:", err)
+		os.Exit(1)
+	}
+	*selectedIATA = selected
+
+}
+
+
+📂 ./internal/form/confirm.go
+package form
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/charmbracelet/huh"
+)
+
+func ShowConfirm(confirm *bool, title, affirmative, negative string) {
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(title).
+				Affirmative(affirmative).
+				Negative(negative).
+				Value(confirm),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		fmt.Println("❌ Ошибка выбора:", err)
+		os.Exit(1)
+	}
+
+}
+
+
+📂 ./internal/form/dates.go
+package form
+
+import (
+	"github.com/charmbracelet/huh"
+)
+
+func AskDates(departDate, returnDate *string) error {
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().Title("Выберите даты").Description("Автоматически формирует диапазоны дат от 3 дней до и 4 дней после выбранной даты — как для вылета, так и для возвращения."),
+			huh.NewInput().Title("Примерная дата вылета (ГГГГ-ММ-ДД)").Value(departDate),
+			huh.NewInput().Title("Примерная дата возвращения (ГГГГ-ММ-ДД)").Value(returnDate),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+📂 ./internal/cache/cache.go
+package cache
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/go-resty/resty/v2"
+)
+
+// --- Типы данных ---
+
+type City struct {
+	Name                 string `json:"name"`
+	Code                 string `json:"code"`
+	CountryCode          string `json:"country_code"`
+	HasFlightableAirport bool   `json:"has_flightable_airport"`
+}
+
+type Country struct {
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
+// --- Обобщённый кеш ---
+
+type genericCache[T any] struct {
+	URL      string
+	FileName string
+	Data     []T
+	once     sync.Once
+	mu       sync.RWMutex
+}
+
+// --- Интерфейс для инициализации и реестр всех кешей ---
+
+type initializableCache interface {
+	init() error
+}
+
+var allCaches []initializableCache
+
+func newGenericCache[T any](url, fileName string) *genericCache[T] {
+	cache := &genericCache[T]{
+		URL:      url,
+		FileName: fileName,
+	}
+	allCaches = append(allCaches, cache)
+	return cache
+}
+
+// --- Конкретные кеши ---
+
+var (
+	citiesCache    = newGenericCache[City]("https://api.travelpayouts.com/data/ru/cities.json", "cities.json")
+	countriesCache = newGenericCache[Country]("https://api.travelpayouts.com/data/ru/countries.json", "countries.json")
+)
+
+// --- Публичная инициализация всех кешей ---
+
+func Init() error {
+	for _, c := range allCaches {
+		if err := c.init(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// --- Внутренняя инициализация конкретного кеша ---
+
+func (c *genericCache[T]) init() error {
+	var err error
+	c.once.Do(func() {
+		var path string
+		path, err = ensureCacheFile(c.URL, c.FileName)
+		if err != nil {
+			return
+		}
+
+		var data []byte
+		data, err = os.ReadFile(path)
+		if err != nil {
+			return
+		}
+
+		var parsed []T
+		if err = json.Unmarshal(data, &parsed); err != nil {
+			return
+		}
+
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.Data = parsed
+	})
+	return err
+}
+
+// --- Загрузка и обновление файла при необходимости ---
+
+func ensureCacheFile(url, fileName string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	cacheDir := filepath.Join(home, ".blet", "cache")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return "", err
+	}
+
+	fullPath := filepath.Join(cacheDir, fileName)
+
+	stat, err := os.Stat(fullPath)
+	if err == nil && stat.ModTime().AddDate(0, 0, 7).After(time.Now()) {
+		return fullPath, nil
+	}
+
+	client := resty.New()
+	resp, err := client.R().
+		SetHeader("Accept", "application/json").
+		Get(url)
+	if err != nil {
+		return "", fmt.Errorf("ошибка загрузки %s: %w", fileName, err)
+	}
+
+	if resp.IsError() {
+		return "", fmt.Errorf("неудачный ответ при загрузке %s: %s", fileName, resp.Status())
+	}
+
+	if err := os.WriteFile(fullPath, resp.Body(), 0644); err != nil {
+		return "", fmt.Errorf("не удалось сохранить %s: %w", fileName, err)
+	}
+
+	return fullPath, nil
+}
+
+// --- Публичные функции доступа ---
+
+func GetAnyName(code string) string {
+	if len(code) == 2 {
+		return GetCountryName(code)
+	} else {
+		return GetCityName(code)
+	}
+}
+
+func GetCityName(code string) string {
+	for _, city := range citiesCache.Data {
+		if city.Code == code {
+			return city.Name
+		}
+	}
+	return code
+}
+
+func GetCountryName(code string) string {
+	for _, country := range countriesCache.Data {
+		if country.Code == code {
+			return country.Name
+		}
+	}
+	return code
+}
+
+func (c *genericCache[T]) Filter(predicate func(T) bool) []T {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var result []T
+	for _, item := range c.Data {
+		if predicate(item) {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+func Cities() *genericCache[City] {
+	return citiesCache
+}
+
+func Countries() *genericCache[Country] {
+	return countriesCache
+}
+
+
+📂 ./internal/models/week_matrix.go
+package models
+
+type WeekMatrixFlight struct {
+	Destination     string `json:"destination"`
+	DepartDate      string `json:"depart_date"`
+	ReturnDate      string `json:"return_date"`
+	Value           int    `json:"value"`
+	NumberOfChanges int    `json:"number_of_changes"`
+	NumberOfStops   int    `json:"number_of_stops"`
+}
+
+type WeekMatrixResponse struct {
+	Success bool               `json:"success"`
+	Data    []WeekMatrixFlight `json:"data"`
+}
+
+
+📂 ./internal/models/special_offers.go
+package models
+
+import "fmt"
+
+type SpecialOffers struct {
+	Destination string `json:"destination"`
+	DepartDate  string `json:"departure_at"`
+	Price       int    `json:"price"`
+	Link        string `json:"link"`
+}
+
+func (t *SpecialOffers) URL() string {
+	base := "https://www.aviasales.ru"
+	return fmt.Sprintf("%s%s", base, t.Link)
+}
+
+type SpecialOffersResponse struct {
+	Success bool            `json:"success"`
+	Data    []SpecialOffers `json:"data"`
+}
+
+
+📂 ./internal/models/tools.go
+package models
+
+type ShortLink struct {
+	Url        string `json:"url"`
+	PartnerUrl string `json:"partner_url"`
+}
+
+type ShortLinksResult struct {
+	Links []ShortLink `json:"links"`
+}
+
+type ShortLinksResponse struct {
+	Status string           `json:"code"`
+	Result ShortLinksResult `json:"result"`
+}
+
+
+📂 ./internal/models/cheapest.go
+package models
+
+import "fmt"
+
+type Ticket struct {
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	Price       int    `json:"price"`
+	DepartureAt string `json:"departure_at"`
+	ReturnAt    string `json:"return_at"`
+	Link        string `json:"link"`
+}
+
+func (t *Ticket) URL() string {
+	base := "https://www.aviasales.ru"
+	return fmt.Sprintf("%s%s", base, t.Link)
+}
+
+type PriceForDatesResponse struct {
+	Success  bool     `json:"success"`
+	Data     []Ticket `json:"data"`
+	Currency string   `json:"currency"`
+}
+
+
+📂 ./internal/api/special_offers.go
+package api
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/internal/models"
+)
+
+func (c *Client) GetSpecialOffers(origin string) (models.SpecialOffersResponse, error) {
+	const url = "https://api.travelpayouts.com/aviasales/v3/get_special_offers"
+
+	var result models.SpecialOffersResponse
+
+	resp, err := c.resty.R().
+		SetQueryParams(map[string]string{
+			"origin": origin,
+		}).
+		SetResult(&result).
+		Get(url)
+
+	if err != nil {
+		return result, err
+	}
+
+	if !result.Success {
+		return result, fmt.Errorf("API error. HTTP: %s. Body: %s", resp.Status(), resp.Body())
+	}
+
+	return result, nil
+}
+
+
+📂 ./internal/api/interface.go
+package api
+
+import "github.com/itcaat/blet/internal/models"
+
+type TravelpayoutsAPI interface {
+	GetSpecialOffers(origin string) (models.SpecialOffersResponse, error)
+	GetCheapest(origin, destination, oneWay string) (models.PriceForDatesResponse, error)
+	GetWeekPrices(origin, destination, depart, back string) (models.WeekMatrixResponse, error)
+	GetShortUrl(url string) (models.ShortLinksResponse, error)
+}
+
+
+📂 ./internal/api/client.go
+package api
+
+import (
+	"github.com/go-resty/resty/v2"
+)
+
+type Client struct {
+	resty *resty.Client
+}
+
+func New(token string) *Client {
+	client := resty.New().
+		SetHeader("Accept", "application/json").
+		SetHeader("X-Access-Token", token)
+
+	return &Client{
+		resty: client,
+	}
+}
+
+var _ TravelpayoutsAPI = (*Client)(nil)
+
+
+📂 ./internal/api/tools.go
+package api
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/internal/models"
+)
+
+func (c *Client) GetShortUrl(url string) (models.ShortLinksResponse, error) {
+	const apiUrl = "https://api.travelpayouts.com/links/v1/create"
+
+	// {
+	// 	"trs": 400658,
+	// 	"marker": 616825,
+	// 	"shorten": true,
+	// 	"links": [
+	// 		{
+	// 			"url": "https://www.aviasales.ru/search/LED1201KUF1?t=S717682492001768330500001295LEDDMEKUF_6f72f9df6f61f48624b3183cbc36d313_7992&search_date=26032025&expected_price_uuid=dae5e307-595b-4841-9bfa-88ee28e5ce01&expected_price_source=share&expected_price_currency=rub&expected_price=7966"
+	// 		}
+	// 	]
+	//  }var client = resty.New()
+
+	var result models.ShortLinksResponse
+
+	resp, err := c.resty.R().
+		SetBody(map[string]interface{}{
+			"trs":     400658,
+			"marker":  616825,
+			"shorten": true,
+			"links": []map[string]interface{}{
+				{
+					"url": url,
+				},
+			},
+		}).
+		SetResult(&result).
+		Post(apiUrl)
+
+	if err != nil {
+		return result, err
+	}
+
+	if result.Status != "success" {
+		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
+	}
+
+	return result, nil
+}
+
+
+📂 ./internal/api/cheapest.go
+package api
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/internal/models"
+)
+
+func (c *Client) GetCheapest(origin, destination, one_way string) (models.PriceForDatesResponse, error) {
+	const apiUrl = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
+
+	var result models.PriceForDatesResponse
+
+	resp, err := c.resty.R().
+		SetQueryParams(map[string]string{
+			"origin":      origin,
+			"destination": destination,
+			"one_way":     one_way,
+			"limit":       "100",
+		}).
+		SetResult(&result).
+		Get(apiUrl)
+
+	if err != nil {
+		return result, err
+	}
+
+	if !result.Success {
+		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s. Request: %s", resp.Status(), resp.Body(), resp.Request.URL)
+	}
+
+	return result, nil
+}
+
+
+📂 ./internal/api/week.go
+package api
+
+import (
+	"fmt"
+
+	"github.com/itcaat/blet/internal/models"
+)
+
+func (c *Client) GetWeekPrices(origin, destination, depart, back string) (models.WeekMatrixResponse, error) {
+	const apiUrl = "https://api.travelpayouts.com/v2/prices/week-matrix"
+	var result models.WeekMatrixResponse
+
+	fmt.Printf("Запрашиваю данные...: %s → %s %s - %s
+", origin, destination, depart, back)
+
+	params := map[string]string{
+		"origin":      origin,
+		"destination": destination,
+		"depart_date": depart,
+	}
+
+	if back != "" {
+		params["return_date"] = back
+	}
+
+	resp, err := c.resty.R().
+		SetQueryParams(params).
+		SetResult(&result).
+		Get(apiUrl)
+
+	if err != nil {
+		return result, err
+	}
+
+	if !result.Success {
+		return result, fmt.Errorf("API error: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
+	}
+
+	return result, nil
+}
+
+
+📂 ./internal/usecase/special_offers.go
+package usecase
+
+import (
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/models"
+)
+
+func GetSpecialOffers(client api.TravelpayoutsAPI, origin string) ([]models.SpecialOffers, error) {
+	resp, err := client.GetSpecialOffers(origin)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+
+📂 ./internal/usecase/cheapest.go
+package usecase
+
+import (
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/models"
+)
+
+func GetCheapestTickets(client api.TravelpayoutsAPI, origin, destination, one_way string) ([]models.Ticket, error) {
+	resp, err := client.GetCheapest(origin, destination, one_way)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+
+📂 ./internal/usecase/week.go
+package usecase
+
+import (
+	"github.com/itcaat/blet/internal/api"
+	"github.com/itcaat/blet/internal/models"
+)
+
+func GetWeekMatrix(client api.TravelpayoutsAPI, origin, destination, depart, back string) ([]models.WeekMatrixFlight, error) {
+	resp, err := client.GetWeekPrices(origin, destination, depart, back)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+
+📂 ./main.go
+package main
+
+import "github.com/itcaat/blet/cmd"
+
+func main() {
+	cmd.Execute()
+}
+

@@ -10,7 +10,7 @@ import (
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunWeekMatrix(client *api.Client, cfg *config.Config) {
+func RunWeekMatrix(client api.TravelpayoutsAPI, cfg *config.Config) {
 
 	var departDate, backDate string
 	err := form.AskDates(&departDate, &backDate)

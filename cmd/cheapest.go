@@ -13,7 +13,7 @@ import (
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunCheapest(client *api.Client, cfg *config.Config) {
+func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 	tickets, err := usecase.GetCheapestTickets(client, cfg.DefaultOrigin, cfg.DefaultDestination, strconv.FormatBool(cfg.OneWay))
 	if err != nil {
 		fmt.Println("❌ Ошибка при получении данных:", err)
