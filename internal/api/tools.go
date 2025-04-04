@@ -3,16 +3,11 @@ package api
 import (
 	"fmt"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/itcaat/blet/internal/models"
 )
 
-const (
-	partnerLinkShorterURL = "https://api.travelpayouts.com/links/v1/create"
-)
-
-func GetShortUrl(url, token string) (models.ShortLinksResponse, error) {
-	var client = resty.New()
+func (c *Client) GetShortUrl(url string) (models.ShortLinksResponse, error) {
+	const apiUrl = "https://api.travelpayouts.com/links/v1/create"
 
 	// {
 	// 	"trs": 400658,
@@ -27,7 +22,7 @@ func GetShortUrl(url, token string) (models.ShortLinksResponse, error) {
 
 	var result models.ShortLinksResponse
 
-	resp, err := client.R().
+	resp, err := c.resty.R().
 		SetBody(map[string]interface{}{
 			"trs":     400658,
 			"marker":  616825,
@@ -38,10 +33,8 @@ func GetShortUrl(url, token string) (models.ShortLinksResponse, error) {
 				},
 			},
 		}).
-		SetHeader("Accept", "application/json").
-		SetHeader("X-Access-Token", token).
 		SetResult(&result).
-		Post(partnerLinkShorterURL)
+		Post(apiUrl)
 
 	if err != nil {
 		return result, err

@@ -3,17 +3,11 @@ package api
 import (
 	"fmt"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/itcaat/blet/internal/models"
 )
 
-const (
-	weekMatrixURL = "https://api.travelpayouts.com/v2/prices/week-matrix"
-)
-
-var client = resty.New()
-
-func GetWeekPrices(origin, destination, depart, back, token string) (*models.WeekMatrixResponse, error) {
+func (c *Client) GetWeekPrices(origin, destination, depart, back string) (*models.WeekMatrixResponse, error) {
+	const apiUrl = "https://api.travelpayouts.com/v2/prices/week-matrix"
 	var result models.WeekMatrixResponse
 
 	fmt.Printf("Запрашиваю данные...: %s → %s %s - %s\n", origin, destination, depart, back)
@@ -21,7 +15,6 @@ func GetWeekPrices(origin, destination, depart, back, token string) (*models.Wee
 	params := map[string]string{
 		"origin":      origin,
 		"destination": destination,
-		"token":       token,
 		"depart_date": depart,
 	}
 
@@ -29,11 +22,10 @@ func GetWeekPrices(origin, destination, depart, back, token string) (*models.Wee
 		params["return_date"] = back
 	}
 
-	resp, err := client.R().
+	resp, err := c.resty.R().
 		SetQueryParams(params).
-		SetHeader("Accept", "application/json").
 		SetResult(&result).
-		Get(weekMatrixURL)
+		Get(apiUrl)
 
 	if err != nil {
 		return nil, err

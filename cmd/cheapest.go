@@ -8,12 +8,13 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunCheapest(cfg *config.Config, token string) {
-	tickets, err := usecase.GetCheapestTickets(cfg.DefaultOrigin, cfg.DefaultDestination, strconv.FormatBool(cfg.OneWay), token)
+func RunCheapest(client *api.Client, cfg *config.Config) {
+	tickets, err := usecase.GetCheapestTickets(client, cfg.DefaultOrigin, cfg.DefaultDestination, strconv.FormatBool(cfg.OneWay))
 	if err != nil {
 		fmt.Println("❌ Ошибка при получении данных:", err)
 		return
@@ -37,12 +38,12 @@ func RunCheapest(cfg *config.Config, token string) {
 				route += fmt.Sprintf(" → %s", from)
 			}
 
-			url, err := usecase.GetShortUrl(t.URL(), token)
+			resp, err := client.GetShortUrl(t.URL())
 			if err != nil {
 				fmt.Println("❌ Ошибка:", err)
 				return
 			}
-			partnerUrl := url[0].PartnerUrl
+			partnerUrl := resp.Result.Links[0].PartnerUrl
 
 			desc := fmt.Sprintf("Туда: %s", t.DepartureAt)
 

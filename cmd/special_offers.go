@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/usecase"
 )
 
-func RunSpecialOffers(cfg *config.Config, token string) {
-	flights, err := usecase.GetSpecialOffers(cfg.DefaultOrigin, token)
+func RunSpecialOffers(client *api.Client, cfg *config.Config) {
+	flights, err := usecase.GetSpecialOffers(client, cfg.DefaultOrigin)
 
 	if err != nil {
 		fmt.Println("❌ Ошибка:", err)
@@ -17,12 +18,12 @@ func RunSpecialOffers(cfg *config.Config, token string) {
 	}
 
 	for _, flight := range flights {
-		url, err := usecase.GetShortUrl(flight.URL(), token)
+		resp, err := client.GetShortUrl(flight.URL())
 		if err != nil {
 			fmt.Println("❌ Ошибка:", err)
 			return
 		}
-		partnerUrl := url[0].PartnerUrl
+		partnerUrl := resp.Result.Links[0].PartnerUrl
 		fmt.Printf("- %s → %s за %d₽ (Вылет: %s) %s\n",
 			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), flight.Price,
 			flight.DepartDate, partnerUrl)

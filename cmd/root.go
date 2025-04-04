@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/itcaat/blet/config"
+	"github.com/itcaat/blet/internal/api"
 	"github.com/itcaat/blet/internal/cache"
 	"github.com/itcaat/blet/internal/form"
 	"github.com/joho/godotenv"
@@ -106,16 +107,18 @@ func Execute() {
 		log.Fatal(err)
 	}
 
+	client := api.New(token)
+
 	switch choice {
 	case "cheapest":
-		RunCheapest(&cfg, token)
+		RunCheapest(client, &cfg)
 
 	case "week":
-		RunWeekMatrix(&cfg, token)
+		RunWeekMatrix(client, &cfg)
 
 	case "special":
 		fmt.Println("✈️ Спецпредложения от авиакомпаний:")
-		RunSpecialOffers(&cfg, token)
+		RunSpecialOffers(client, &cfg)
 
 	default:
 		fmt.Println("Неизвестный выбор")
