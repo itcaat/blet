@@ -5,7 +5,7 @@ import (
 	"github.com/itcaat/blet/internal/models"
 )
 
-func GetSpecialOffers(client *api.Client, origin string) ([]models.SpecialOffers, error) {
+func GetSpecialOffers(client api.TravelpayoutsAPI, origin string) ([]models.SpecialOffers, error) {
 	resp, err := client.GetSpecialOffers(origin)
 	if err != nil {
 		return nil, err

@@ -17,3 +17,5 @@ func New(token string) *Client {
 		resty: client,
 	}
 }
+
+var _ TravelpayoutsAPI = (*Client)(nil)
