@@ -6,7 +6,7 @@ import (
 	"github.com/itcaat/blet/internal/models"
 )
 
-func (c *Client) GetWeekPrices(origin, destination, depart, back string) (*models.WeekMatrixResponse, error) {
+func (c *Client) GetWeekPrices(origin, destination, depart, back string) (models.WeekMatrixResponse, error) {
 	const apiUrl = "https://api.travelpayouts.com/v2/prices/week-matrix"
 	var result models.WeekMatrixResponse
 
@@ -28,12 +28,12 @@ func (c *Client) GetWeekPrices(origin, destination, depart, back string) (*model
 		Get(apiUrl)
 
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
 	if !result.Success {
-		return nil, fmt.Errorf("API error: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
+		return result, fmt.Errorf("API error: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
 	}
 
-	return &result, nil
+	return result, nil
 }
