@@ -7,6 +7,7 @@ type Ticket struct {
 	Destination string `json:"destination"`
 	Price       int    `json:"price"`
 	DepartureAt string `json:"departure_at"`
+	ReturnAt    string `json:"return_at"`
 	Link        string `json:"link"`
 }
 

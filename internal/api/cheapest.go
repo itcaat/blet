@@ -11,7 +11,7 @@ const (
 	pricesForDatesURL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
 )
 
-func GetCheapest(origin, destination, token string) (models.PriceForDatesResponse, error) {
+func GetCheapest(origin, destination, one_way, token string) (models.PriceForDatesResponse, error) {
 	var client = resty.New()
 	var result models.PriceForDatesResponse
 
@@ -19,8 +19,8 @@ func GetCheapest(origin, destination, token string) (models.PriceForDatesRespons
 		SetQueryParams(map[string]string{
 			"origin":      origin,
 			"destination": destination,
-			"one_way":     "true",
-			"limit":       "30",
+			"one_way":     one_way,
+			"limit":       "100",
 			"token":       token,
 		}).
 		SetHeader("Accept", "application/json").

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -12,7 +13,7 @@ import (
 )
 
 func RunCheapest(cfg *config.Config, token string) {
-	tickets, err := usecase.GetCheapestTickets(cfg.DefaultOrigin, cfg.DefaultDestination, token)
+	tickets, err := usecase.GetCheapestTickets(cfg.DefaultOrigin, cfg.DefaultDestination, strconv.FormatBool(cfg.OneWay), token)
 	if err != nil {
 		fmt.Println("❌ Ошибка при получении данных:", err)
 		return
@@ -32,13 +33,24 @@ func RunCheapest(cfg *config.Config, token string) {
 			from := cache.GetCityName(t.Origin)
 			to := cache.GetAnyName(t.Destination)
 			route := fmt.Sprintf("%s → %s", from, to)
+			if !cfg.OneWay {
+				route += fmt.Sprintf(" → %s", from)
+			}
+
 			url, err := usecase.GetShortUrl(t.URL(), token)
 			if err != nil {
 				fmt.Println("❌ Ошибка:", err)
 				return
 			}
 			partnerUrl := url[0].PartnerUrl
-			desc := fmt.Sprintf("%s — %d₽ — %s", t.DepartureAt, t.Price, partnerUrl)
+
+			desc := fmt.Sprintf("Туда: %s", t.DepartureAt)
+
+			if cfg.OneWay {
+				desc += fmt.Sprintf("— %d₽ — %s", t.Price, partnerUrl)
+			} else {
+				desc += fmt.Sprintf(". Обратно: %s — %d₽ — %s", t.ReturnAt, t.Price, partnerUrl)
+			}
 
 			if grouped[route] == nil {
 				grouped[route] = []string{}
