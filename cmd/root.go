@@ -45,6 +45,7 @@ func Execute() {
 	if err != nil || cfg.DefaultOrigin == "" || cfg.DefaultDestination == "" {
 		cfg.DefaultOrigin = "MOW"
 		cfg.DefaultDestination = "LED"
+		cfg.OneWay = true
 
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
@@ -61,7 +62,7 @@ func Execute() {
 			huh.NewNote().
 				Title("\nПривествую, странник. Кажется, пора полетать!? ✈️"),
 			huh.NewConfirm().
-				Title(fmt.Sprintf("Откуда: %s. \nКуда: %s. \n\nОставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination))).
+				Title(fmt.Sprintf("Откуда: %s \nКуда: %s\nНаправление: %s \n\nОставим как есть или поменяем?", cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(cfg.DefaultDestination), cfg.TekstomPokazhi())).
 				Value(&change_default_origin).
 				Affirmative("Выбрать другой").
 				Negative("Оставить"),
@@ -74,11 +75,15 @@ func Execute() {
 	if change_default_origin {
 		form.ShowIataTargets(&cfg.DefaultOrigin, "Откуда полетим", false)
 		form.ShowIataTargets(&cfg.DefaultDestination, "Куда полетим (можно выбрать страну или город)", true)
+		form.ShowConfirm(&cfg.OneWay, "В одну с сторону?", "Только туда", "Туда-обратно")
+
 		if err := config.SaveConfig(cfg); err != nil {
 			fmt.Println("❌ Не удалось сохранить конфиг:", err)
 			os.Exit(1)
 		}
 	}
+
+	fmt.Sprintln(cfg.OneWay)
 
 	// emoji airplane
 	var choice string

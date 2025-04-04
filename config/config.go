@@ -9,6 +9,15 @@ import (
 type Config struct {
 	DefaultOrigin      string `json:"default_origin"`
 	DefaultDestination string `json:"default_destination"`
+	OneWay             bool   `json:"one_way"`
+}
+
+func (c *Config) TekstomPokazhi() string {
+	if c.OneWay {
+		return "В одну сторону"
+	} else {
+		return "Туда-обратно"
+	}
 }
 
 func configPath() (string, error) {
