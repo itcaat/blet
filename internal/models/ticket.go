@@ -9,6 +9,7 @@ type Ticket struct {
 	DepartureAt string `json:"departure_at"`
 	ReturnAt    string `json:"return_at"`
 	Link        string `json:"link"`
+	ShortUrl    string
 }
 
 func (t *Ticket) URL() string {

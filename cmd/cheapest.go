@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"sync"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -28,11 +27,8 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 
 	grouped := make(map[string][]string)
 	details := make(map[string]map[string]string)
-	var mu sync.Mutex
 
 	prepareTickets := func() {
-		var wg sync.WaitGroup
-		sem := make(chan struct{}, 10) // ограничим до 5 одновременных запросов
 
 		for _, t := range tickets {
 			t := t
@@ -50,31 +46,13 @@ func RunCheapest(client api.TravelpayoutsAPI, cfg *config.Config) {
 				desc += fmt.Sprintf(". Обратно: %s — %d₽", t.ReturnAt, t.Price)
 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-
-				resp, err := client.GetShortUrl(t.URL())
-				if err != nil {
-					fmt.Println("❌ Ошибка:", err)
-					return
-				}
-				partnerUrl := resp.Result.Links[0].PartnerUrl
-				fullDesc := fmt.Sprintf("%s — %s", desc, partnerUrl)
-
-				mu.Lock()
-				grouped[route] = append(grouped[route], fullDesc)
-				if details[route] == nil {
-					details[route] = make(map[string]string)
-				}
-				details[route][fullDesc] = t.URL()
-				mu.Unlock()
-			}()
+			fullDesc := fmt.Sprintf("%s — %s", desc, t.ShortUrl)
+			grouped[route] = append(grouped[route], fullDesc)
+			if details[route] == nil {
+				details[route] = make(map[string]string)
+			}
+			details[route][fullDesc] = t.URL()
 		}
-
-		wg.Wait()
 	}
 
 	var selectedRoute string
