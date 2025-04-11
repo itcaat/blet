@@ -38,13 +38,11 @@ func (m *mockAPIClient) GetWeekPrices(origin, destination, depart, back string) 
 	}, nil
 }
 
-func (m *mockAPIClient) GetShortUrl(url string) (models.ShortLinksResponse, error) {
-	return models.ShortLinksResponse{
-		Status: "success",
-		Result: models.ShortLinksResult{
-			Links: []models.ShortLink{{Url: url, PartnerUrl: "https://short.url/mock"}},
-		},
-	}, nil
+func (m *mockAPIClient) GetShortUrlArray(tickets []*models.Ticket) error {
+	for _, ticket := range tickets {
+		ticket.Link = "https://short.url/mock"
+	}
+	return nil
 }
 
 func TestGetSpecialOffers(t *testing.T) {
