@@ -26,6 +26,6 @@ func RunSpecialOffers(client api.TravelpayoutsAPI, cfg *config.Config) {
 		partnerUrl := resp.Result.Links[0].PartnerUrl
 		fmt.Printf("- %s → %s за %d₽ (Вылет: %s) %s\n",
 			cache.GetCityName(cfg.DefaultOrigin), cache.GetAnyName(flight.Destination), flight.Price,
-			flight.DepartDate, partnerUrl)
+			flight.DepartureAt, partnerUrl)
 	}
 }

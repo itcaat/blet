@@ -12,9 +12,9 @@ type mockAPIClient struct{}
 func (m *mockAPIClient) GetSpecialOffers(origin string) (models.SpecialOffersResponse, error) {
 	return models.SpecialOffersResponse{
 		Success: true,
-		Data: []models.SpecialOffers{
-			{Destination: "LED", DepartDate: "2025-07-01", Price: 4999, Link: "/search/led"},
-			{Destination: "KUF", DepartDate: "2025-07-05", Price: 3500, Link: "/search/kuf"},
+		Data: []models.Ticket{
+			{Destination: "LED", DepartureAt: "2025-07-01", Price: 4999, Link: "/search/led"},
+			{Destination: "KUF", DepartureAt: "2025-07-05", Price: 3500, Link: "/search/kuf"},
 		},
 	}, nil
 }
