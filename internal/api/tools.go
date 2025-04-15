@@ -6,43 +6,57 @@ import (
 	"github.com/itcaat/blet/internal/models"
 )
 
-func (c *Client) GetShortUrl(url string) (models.ShortLinksResponse, error) {
-	const apiUrl = "https://api.travelpayouts.com/links/v1/create"
+func (c *Client) GetShortUrlArray(tickets []*models.Ticket) error {
+	const (
+		apiURL    = "https://api.travelpayouts.com/links/v1/create"
+		batchSize = 10
+	)
 
-	// {
-	// 	"trs": 400658,
-	// 	"marker": 616825,
-	// 	"shorten": true,
-	// 	"links": [
-	// 		{
-	// 			"url": "https://www.aviasales.ru/search/LED1201KUF1?t=S717682492001768330500001295LEDDMEKUF_6f72f9df6f61f48624b3183cbc36d313_7992&search_date=26032025&expected_price_uuid=dae5e307-595b-4841-9bfa-88ee28e5ce01&expected_price_source=share&expected_price_currency=rub&expected_price=7966"
-	// 		}
-	// 	]
-	//  }var client = resty.New()
+	if len(tickets) == 0 {
+		return nil
+	}
 
-	var result models.ShortLinksResponse
+	for start := 0; start < len(tickets); start += batchSize {
+		end := start + batchSize
+		if end > len(tickets) {
+			end = len(tickets)
+		}
+		batch := tickets[start:end]
 
-	resp, err := c.resty.R().
-		SetBody(map[string]interface{}{
+		links := make([]map[string]interface{}, len(batch))
+		for i, t := range batch {
+			links[i] = map[string]interface{}{"url": t.URL()}
+		}
+
+		var result models.ShortLinksResponse
+		payload := map[string]interface{}{
 			"trs":     400658,
 			"marker":  616825,
 			"shorten": true,
-			"links": []map[string]interface{}{
-				{
-					"url": url,
-				},
-			},
-		}).
-		SetResult(&result).
-		Post(apiUrl)
+			"links":   links,
+		}
 
-	if err != nil {
-		return result, err
+		resp, err := c.resty.R().
+			SetBody(payload).
+			SetResult(&result).
+			Post(apiURL)
+		if err != nil {
+			return fmt.Errorf("запрос не удался: %w", err)
+		}
+
+		if result.Status != "success" {
+			return fmt.Errorf(
+				"⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s. URL: %s",
+				resp.Status(), resp.Body(), resp.Request.URL,
+			)
+		}
+
+		for i, t := range batch {
+			if i < len(result.Result.Links) {
+				t.ShortUrl = result.Result.Links[i].PartnerUrl
+			}
+		}
 	}
 
-	if result.Status != "success" {
-		return result, fmt.Errorf("⚠️ API не вернул успешный ответ. HTTP: %s. Body: %s. Url: %s", resp.Status(), resp.Body(), resp.Request.URL)
-	}
-
-	return result, nil
+	return nil
 }
